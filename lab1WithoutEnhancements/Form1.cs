@@ -17,12 +17,7 @@ namespace lab1WithoutEnhancements
         private TextBox[,] textBoxArray;
         private TextBox[] textBoxObjectiveArray;
         private const int Padding = 10; // Отступы между элементами
-        private const int ElementHeight = 25;
-        private const int MinWidth = 50;
-        private double[,] simplexTable;
         
-
-
         public Form1()
         {
             InitializeComponent();
@@ -35,17 +30,17 @@ namespace lab1WithoutEnhancements
             // Панель для переменных
             variablesPanel = new Panel
             {
-                Location = new Point(10, newPanelYPosition),
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top
             };
 
             // Панель для ограничений
             constraintsPanel = new Panel
             {
-                Location = new Point(10, variablesPanel.Location.Y + variablesPanel.Height + Padding),
                 AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top
             };
 
             // Добавляем панели на форму
@@ -76,8 +71,8 @@ namespace lab1WithoutEnhancements
             }
 
             int newPanelYPosition = textBox2.Location.Y + textBox2.Height + Padding;
-            variablesPanel.Location = new Point(10, newPanelYPosition);
-            constraintsPanel.Location = new Point(10, variablesPanel.Location.Y + variablesPanel.Height + Padding);
+            variablesPanel.Location = new Point(10, newPanelYPosition + 200);
+            constraintsPanel.Location = new Point(10, variablesPanel.Location.Y + variablesPanel.Height + Padding + 200);
         }
 
         private void CreateVariableInputs(int numVariables)
@@ -88,11 +83,11 @@ namespace lab1WithoutEnhancements
             Label objectiveLabel = new Label();
             objectiveLabel.Text = "Коэффициенты целевой функции:";
             objectiveLabel.AutoSize = true;
-            objectiveLabel.Location = new Point(this.ClientSize.Width / 2 - 100, 20);
-            this.Controls.Add(objectiveLabel);
+            objectiveLabel.Location = new Point(0, 20); // Устанавливаем локальную позицию
+            variablesPanel.Controls.Add(objectiveLabel); // Добавляем на панель
 
             int totalWidth = numVariables * 100; // Общая ширина всех TextBox'ов
-            int startX = this.ClientSize.Width / 2 - totalWidth / 2; // Центрирование всех TextBox'ов
+            int startX = (variablesPanel.ClientSize.Width - totalWidth) / 2; // Центрирование всех TextBox'ов относительно панели
 
             for (int i = 0; i < numVariables; i++)
             {
@@ -100,17 +95,16 @@ namespace lab1WithoutEnhancements
                 textBoxObjectiveArray[i].Location = new Point(startX + i * 100, 50);
                 textBoxObjectiveArray[i].Size = new Size(80, 20);
                 textBoxObjectiveArray[i].Anchor = AnchorStyles.Top | AnchorStyles.Left;
-                this.Controls.Add(textBoxObjectiveArray[i]);
+                variablesPanel.Controls.Add(textBoxObjectiveArray[i]); // Добавляем на панель
 
                 Label varLabel = new Label();
                 varLabel.Text = $"x{i + 1}";
                 varLabel.AutoSize = true;
                 varLabel.Location = new Point(startX + i * 100, 30); // Позиционирование метки над TextBox
-                this.Controls.Add(varLabel);
+                variablesPanel.Controls.Add(varLabel); // Добавляем на панель
             }
         }
 
-        
         private void CreateConstraintInputs(int numConstraints, int numVariables)
         {
             // Очистка предыдущих полей ввода для ограничений
@@ -118,7 +112,7 @@ namespace lab1WithoutEnhancements
             {
                 foreach (var textBox in textBoxArray)
                 {
-                    this.Controls.Remove(textBox);
+                    constraintsPanel.Controls.Remove(textBox); // Удаляем из панели ограничений
                 }
             }
 
@@ -128,11 +122,11 @@ namespace lab1WithoutEnhancements
             Label constraintsLabel = new Label();
             constraintsLabel.Text = "Ограничения:";
             constraintsLabel.AutoSize = true;
-            constraintsLabel.Location = new Point(this.ClientSize.Width / 2 - 100, 100);
-            this.Controls.Add(constraintsLabel);
+            constraintsLabel.Location = new Point(0, 100); // Устанавливаем локальную позицию
+            constraintsPanel.Controls.Add(constraintsLabel); // Добавляем на панель
 
             int totalWidth = (numVariables + 1) * 100 + 20; // Общая ширина всех TextBox'ов и знаков <=
-            int startX = this.ClientSize.Width / 2 - totalWidth / 2; // Центрирование всех TextBox'ов
+            int startX = (constraintsPanel.ClientSize.Width - totalWidth) / 2; // Центрирование всех TextBox'ов относительно панели
 
             for (int i = 0; i < numConstraints; i++)
             {
@@ -142,7 +136,7 @@ namespace lab1WithoutEnhancements
                     textBoxArray[i, j].Location = new Point(startX + j * 100, 130 + i * 30); // Позиционирование TextBox
                     textBoxArray[i, j].Size = new Size(80, 20);
                     textBoxArray[i, j].Anchor = AnchorStyles.Top | AnchorStyles.Left;
-                    this.Controls.Add(textBoxArray[i, j]);
+                    constraintsPanel.Controls.Add(textBoxArray[i, j]); // Добавляем на панель
 
                     if (i == 0)
                     {
@@ -150,7 +144,7 @@ namespace lab1WithoutEnhancements
                         varLabel.Text = $"x{j + 1}";
                         varLabel.AutoSize = true;
                         varLabel.Location = new Point(startX + j * 100, 110); // Позиционирование метки
-                        this.Controls.Add(varLabel);
+                        constraintsPanel.Controls.Add(varLabel); // Добавляем на панель
                     }
                 }
 
@@ -159,42 +153,15 @@ namespace lab1WithoutEnhancements
                 inequalityLabel.Text = "≤";
                 inequalityLabel.AutoSize = true;
                 inequalityLabel.Location = new Point(startX + numVariables * 100, 130 + i * 30);
-                this.Controls.Add(inequalityLabel);
+                constraintsPanel.Controls.Add(inequalityLabel); // Добавляем на панель
 
                 // Свободный член (справа от знака "<=")
                 textBoxArray[i, numVariables] = new TextBox();
-                textBoxArray[i, numVariables].Location = new Point(startX + (numVariables + 1) * 100 - 100, 130 + i * 30);
+                textBoxArray[i, numVariables].Location = new Point(startX + (numVariables + 1) * 100 - 60, 130 + i * 30);
                 textBoxArray[i, numVariables].Size = new Size(80, 20);
                 textBoxArray[i, numVariables].Anchor = AnchorStyles.Top | AnchorStyles.Left;
-                this.Controls.Add(textBoxArray[i, numVariables]);
+                constraintsPanel.Controls.Add(textBoxArray[i, numVariables]); // Добавляем на панель
             }
-        }
-
-        private double[,] ReadMatrixValues()
-        {
-            int rows = textBoxArray.GetLength(0);
-            int cols = textBoxArray.GetLength(1);
-            double[,] matrixValues = new double[rows, cols];
-
-            for (int i = 0; i < rows; i++)
-            {
-                for (int j = 0; j < cols; j++)
-                {
-                    if (textBoxArray[i, j] != null)
-                    {
-                        if (double.TryParse(textBoxArray[i, j].Text, out double result))
-                        {
-                            matrixValues[i, j] = result;
-                        }
-                        else
-                        {
-                            MessageBox.Show($"Некорректное значение в ячейке ({i + 1}, {j + 1}). Введите число.");
-                            return null; // Возвращаем null при ошибке
-                        }
-                    }
-                }
-            }
-            return matrixValues;
         }
 
         private void button1_Click(object sender, EventArgs e)
