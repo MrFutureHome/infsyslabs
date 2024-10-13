@@ -15,10 +15,13 @@ namespace lab1WithoutEnhancements
         private Panel variablesPanel;
         private Panel constraintsPanel;
         private TextBox[,] textBoxArray;
+        private TextBox[] textBoxObjectiveArray;
         private const int Padding = 10; // Отступы между элементами
         private const int ElementHeight = 25;
         private const int MinWidth = 50;
         private double[,] simplexTable;
+        
+
 
         public Form1()
         {
@@ -27,10 +30,12 @@ namespace lab1WithoutEnhancements
             this.Text = "Симплекс-Калькулятор";
             //this.Size = new Size(800, 600);
 
+            int newPanelYPosition = textBox2.Location.Y + textBox2.Height + Padding;
+
             // Панель для переменных
             variablesPanel = new Panel
             {
-                Location = new Point(10, 100),
+                Location = new Point(10, newPanelYPosition),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
@@ -38,7 +43,7 @@ namespace lab1WithoutEnhancements
             // Панель для ограничений
             constraintsPanel = new Panel
             {
-                Location = new Point(10, 250),
+                Location = new Point(10, variablesPanel.Location.Y + variablesPanel.Height + Padding),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
@@ -69,130 +74,99 @@ namespace lab1WithoutEnhancements
                 //MessageBox.Show("Введите корректные числа для переменных и ограничений.");
                 return;
             }
+
+            int newPanelYPosition = textBox2.Location.Y + textBox2.Height + Padding;
+            variablesPanel.Location = new Point(10, newPanelYPosition);
+            constraintsPanel.Location = new Point(10, variablesPanel.Location.Y + variablesPanel.Height + Padding);
         }
 
         private void CreateVariableInputs(int numVariables)
         {
-            Label objectiveLabel = new Label
-            {
-                Text = "Целевая функция:",
-                AutoSize = true,
-                Location = new Point(10, 10)
-            };
-            variablesPanel.Controls.Add(objectiveLabel);
+            // Создаем массив TextBox для коэффициентов целевой функции
+            textBoxObjectiveArray = new TextBox[numVariables];
 
-            // Рассчитываем ширину полей в зависимости от количества переменных и доступного места
-            int panelWidth = this.ClientSize.Width - 40;
-            int totalWidth = panelWidth - (Padding * 2 * numVariables);
-            int fieldWidth = Math.Max(MinWidth, totalWidth / numVariables);
+            Label objectiveLabel = new Label();
+            objectiveLabel.Text = "Коэффициенты целевой функции:";
+            objectiveLabel.AutoSize = true;
+            objectiveLabel.Location = new Point(this.ClientSize.Width / 2 - 100, 20);
+            this.Controls.Add(objectiveLabel);
+
+            int totalWidth = numVariables * 100; // Общая ширина всех TextBox'ов
+            int startX = this.ClientSize.Width / 2 - totalWidth / 2; // Центрирование всех TextBox'ов
 
             for (int i = 0; i < numVariables; i++)
             {
-                TextBox variableTextBox = new TextBox
-                {
-                    Width = fieldWidth,
-                    Location = new Point(i * (fieldWidth + Padding * 2), 40)
-                };
+                textBoxObjectiveArray[i] = new TextBox();
+                textBoxObjectiveArray[i].Location = new Point(startX + i * 100, 50);
+                textBoxObjectiveArray[i].Size = new Size(80, 20);
+                textBoxObjectiveArray[i].Anchor = AnchorStyles.Top | AnchorStyles.Left;
+                this.Controls.Add(textBoxObjectiveArray[i]);
 
-                Label variableLabel = new Label
-                {
-                    Text = $"x{i + 1}",
-                    AutoSize = true,
-                    Location = new Point(variableTextBox.Location.X + fieldWidth, 44) // Метка справа от TextBox
-                };
-
-                variablesPanel.Controls.Add(variableTextBox);
-                variablesPanel.Controls.Add(variableLabel);
-
+                Label varLabel = new Label();
+                varLabel.Text = $"x{i + 1}";
+                varLabel.AutoSize = true;
+                varLabel.Location = new Point(startX + i * 100, 30); // Позиционирование метки над TextBox
+                this.Controls.Add(varLabel);
             }
-
-            Label maximizationLabel = new Label
-            {
-                Text = $"-> max",
-                AutoSize = true,
-                Location = new Point(numVariables * (fieldWidth + Padding * 2) - 5, 44) // Метка справа от TextBox
-            };
-
-            variablesPanel.Controls.Add(maximizationLabel);
-
-            // Радиокнопки для выбора типа задачи (максимизация/минимизация)
-            /*RadioButton maxRadioButton = new RadioButton
-            {
-                Text = "Максимизация",
-                Location = new Point(10, 70),
-                AutoSize = true
-            };
-            RadioButton minRadioButton = new RadioButton
-            {
-                Text = "Минимизация",
-                Location = new Point(120, 70),
-                AutoSize = true
-            };
-            minRadioButton.Checked = true; // По умолчанию минимизация
-
-            variablesPanel.Controls.Add(maxRadioButton);
-            variablesPanel.Controls.Add(minRadioButton);*/
         }
 
+        
         private void CreateConstraintInputs(int numConstraints, int numVariables)
         {
-            Label constraintsLabel = new Label
+            // Очистка предыдущих полей ввода для ограничений
+            if (textBoxArray != null)
             {
-                Text = "Ограничения:",
-                AutoSize = true,
-                Location = new Point(10, 10)
-            };
-            constraintsPanel.Controls.Add(constraintsLabel);
+                foreach (var textBox in textBoxArray)
+                {
+                    this.Controls.Remove(textBox);
+                }
+            }
 
-            textBoxArray = new TextBox[numConstraints, numVariables + 1];
+            // Создаем массив TextBox для ограничений
+            textBoxArray = new TextBox[numConstraints, numVariables + 1]; // +1 для свободных членов
 
-            int panelWidth = this.ClientSize.Width - 40;
-            int totalWidth = panelWidth - (Padding * 2 * (numVariables + 2));
-            int fieldWidth = Math.Max(MinWidth, totalWidth / (numVariables + 2));
+            Label constraintsLabel = new Label();
+            constraintsLabel.Text = "Ограничения:";
+            constraintsLabel.AutoSize = true;
+            constraintsLabel.Location = new Point(this.ClientSize.Width / 2 - 100, 100);
+            this.Controls.Add(constraintsLabel);
 
-            // Создаем строку для каждого ограничения
+            int totalWidth = (numVariables + 1) * 100 + 20; // Общая ширина всех TextBox'ов и знаков <=
+            int startX = this.ClientSize.Width / 2 - totalWidth / 2; // Центрирование всех TextBox'ов
+
             for (int i = 0; i < numConstraints; i++)
             {
-                int yPosition = 40 + i * (ElementHeight + Padding); // Вычисляем Y-позицию для каждого ограничения
-
-                // Создаем набор текстовых полей и меток для каждого ограничения
                 for (int j = 0; j < numVariables; j++)
                 {
-                    TextBox variableTextBox = new TextBox
-                    {
-                        Width = fieldWidth,
-                        Location = new Point(j * (fieldWidth + Padding * 2), yPosition)
-                    };
+                    textBoxArray[i, j] = new TextBox();
+                    textBoxArray[i, j].Location = new Point(startX + j * 100, 130 + i * 30); // Позиционирование TextBox
+                    textBoxArray[i, j].Size = new Size(80, 20);
+                    textBoxArray[i, j].Anchor = AnchorStyles.Top | AnchorStyles.Left;
+                    this.Controls.Add(textBoxArray[i, j]);
 
-                    Label variableLabel = new Label
+                    if (i == 0)
                     {
-                        Text = $"x{j + 1}",
-                        AutoSize = true,
-                        Location = new Point(variableTextBox.Location.X + fieldWidth, yPosition + 4) // Метка справа от TextBox
-                    };
-
-                    constraintsPanel.Controls.Add(variableTextBox);
-                    textBoxArray[i, j] = variableTextBox;
-                    constraintsPanel.Controls.Add(variableLabel);
+                        Label varLabel = new Label();
+                        varLabel.Text = $"x{j + 1}";
+                        varLabel.AutoSize = true;
+                        varLabel.Location = new Point(startX + j * 100, 110); // Позиционирование метки
+                        this.Controls.Add(varLabel);
+                    }
                 }
 
-                TextBox rightSide = new TextBox
-                {
-                    Width = fieldWidth,
-                    Location = new Point((numVariables + 1) * (fieldWidth + Padding * 2), yPosition)
-                };
+                // Добавляем метку "<="
+                Label inequalityLabel = new Label();
+                inequalityLabel.Text = "≤";
+                inequalityLabel.AutoSize = true;
+                inequalityLabel.Location = new Point(startX + numVariables * 100, 130 + i * 30);
+                this.Controls.Add(inequalityLabel);
 
-                int centerXPosition = (rightSide.Location.X + rightSide.Width + (numVariables * (fieldWidth + Padding * 2))) / 2;
-
-                Label lessEqualLabel = new Label
-                {
-                    Text = "<=",
-                    AutoSize = true,
-                    Location = new Point(centerXPosition - 50, yPosition + 4)
-                };
-
-                constraintsPanel.Controls.Add(lessEqualLabel);
-                constraintsPanel.Controls.Add(rightSide);
+                // Свободный член (справа от знака "<=")
+                textBoxArray[i, numVariables] = new TextBox();
+                textBoxArray[i, numVariables].Location = new Point(startX + (numVariables + 1) * 100 - 100, 130 + i * 30);
+                textBoxArray[i, numVariables].Size = new Size(80, 20);
+                textBoxArray[i, numVariables].Anchor = AnchorStyles.Top | AnchorStyles.Left;
+                this.Controls.Add(textBoxArray[i, numVariables]);
             }
         }
 
@@ -223,136 +197,181 @@ namespace lab1WithoutEnhancements
             return matrixValues;
         }
 
-        private void SolveSimplexMethod()
+        private void button1_Click(object sender, EventArgs e)
         {
-            double[,] matrixValues = ReadMatrixValues();
-            if (matrixValues == null) return; // Проверка на наличие ошибок ввода
-
-            int numVariables = matrixValues.GetLength(1) - 1; // Последний столбец - это правые части ограничений
-            int numConstraints = matrixValues.GetLength(0);
-
-            double[,] A = new double[numConstraints, numVariables];
-            double[] b = new double[numConstraints];
-
-            for (int i = 0; i < numConstraints; i++)
+            try
             {
+                int numVariables = textBoxObjectiveArray.Length; // Количество переменных
+                int numConstraints = textBoxArray.GetLength(0); // Количество ограничений
+
+                double[,] table = new double[numConstraints + 1, numVariables + 1];
+
+                // Заполнение коэффициентов ограничений
+                for (int i = 0; i < numConstraints; i++)
+                {
+                    double[] constraintCoefficients = new double[numVariables];
+                    for (int j = 0; j < numVariables; j++)
+                    {
+                        constraintCoefficients[j] = Convert.ToDouble(textBoxArray[i, j].Text);
+                    }
+                    table[i, 0] = Convert.ToDouble(textBoxArray[i, numVariables].Text); // Свободный член
+                    for (int j = 0; j < numVariables; j++)
+                    {
+                        table[i, j + 1] = constraintCoefficients[j];
+                    }
+                }
+
+                // Заполнение целевой функции
                 for (int j = 0; j < numVariables; j++)
                 {
-                    A[i, j] = matrixValues[i, j]; // Коэффициенты ограничений
+                    table[numConstraints, j + 1] = -Convert.ToDouble(textBoxObjectiveArray[j].Text);
                 }
-                b[i] = matrixValues[i, numVariables]; // Правые части ограничений
+
+                double[] result = new double[numVariables];
+                Simplex simplex = new Simplex(table);
+                double[,] tableResult = simplex.Calculate(result);
+
+                // Вывод результата в MessageBox
+                string message = "Решение:\n";
+                for (int i = 0; i < numVariables; i++)
+                {
+                    message += $"x{i + 1} = {Math.Round(result[i], 3)}\n";
+                }
+                message += "\nЦелевая функция: " + Math.Round(tableResult[numConstraints, 0], 3);
+
+                MessageBox.Show(message, "Результат");
             }
-
-            // Заполнение целевой функции: max Z = c^T * x
-            double[] c = new double[numVariables];
-            for (int j = 0; j < numVariables; j++)
+            catch (Exception ex)
             {
-                c[j] = (j == 0) ? 2 : 3; // Коэффициенты целевой функции: 2x1 + 3x2
-            }
-
-            double[] solution = SimplexAlgorithm(A, b, c, numVariables, numConstraints);
-
-            if (solution != null)
-            {
-                // Вывод решения
-                MessageBox.Show($"Решение: x1 = {solution[0]}, x2 = {solution[1]}");
+                MessageBox.Show("Ошибка: " + ex.Message, "Ошибка");
             }
         }
 
-        private double[] SimplexAlgorithm(double[,] A, double[] b, double[] c, int numVariables, int numConstraints)
+        public class Simplex
         {
-            // Создаем симплекс-таблицу
-            int totalVariables = numVariables + numConstraints;
-            double[,] simplexTable = new double[numConstraints + 1, totalVariables + 1];
+            double[,] table;
+            int m, n;
+            List<int> basis;
 
-            // Заполняем симплекс-таблицу
-            for (int i = 0; i < numConstraints; i++)
+            public Simplex(double[,] source)
             {
-                for (int j = 0; j < numVariables; j++)
+                m = source.GetLength(0);
+                n = source.GetLength(1);
+                table = new double[m, n + m - 1];
+                basis = new List<int>();
+
+                for (int i = 0; i < m; i++)
                 {
-                    simplexTable[i, j] = A[i, j]; // Заполняем ограничения
-                }
-                simplexTable[i, totalVariables] = b[i]; // Правые части
-            }
-
-            // Заполняем целевую функцию (последняя строка)
-            for (int j = 0; j < numVariables; j++)
-            {
-                simplexTable[numConstraints, j] = -c[j]; // Мы берем -c для максимизации
-            }
-
-            // Итерация симплекс-метода
-            while (true)
-            {
-                // Находим входящий столбец (переменная, которая будет введена в базис)
-                int pivotColumn = -1;
-                for (int j = 0; j < totalVariables; j++)
-                {
-                    if (simplexTable[numConstraints, j] > 0)
+                    for (int j = 0; j < table.GetLength(1); j++)
                     {
-                        pivotColumn = j;
+                        if (j < n)
+                            table[i, j] = source[i, j];
+                        else
+                            table[i, j] = 0;
+                    }
+
+                    if ((n + i) < table.GetLength(1))
+                    {
+                        table[i, n + i] = 1;
+                        basis.Add(n + i);
+                    }
+                }
+
+                n = table.GetLength(1);
+            }
+
+            public double[,] Calculate(double[] result)
+            {
+                int mainCol, mainRow;
+
+                while (!IsItEnd())
+                {
+                    mainCol = findMainCol();
+                    mainRow = findMainRow(mainCol);
+                    basis[mainRow] = mainCol;
+
+                    double[,] new_table = new double[m, n];
+
+                    for (int j = 0; j < n; j++)
+                        new_table[mainRow, j] = table[mainRow, j] / table[mainRow, mainCol];
+
+                    for (int i = 0; i < m; i++)
+                    {
+                        if (i == mainRow)
+                            continue;
+
+                        for (int j = 0; j < n; j++)
+                            new_table[i, j] = table[i, j] - table[i, mainCol] * new_table[mainRow, j];
+                    }
+                    table = new_table;
+                }
+
+                for (int i = 0; i < result.Length; i++)
+                {
+                    int k = basis.IndexOf(i + 1);
+                    if (k != -1)
+                        result[i] = table[k, 0];
+                    else
+                        result[i] = 0;
+                }
+
+                return table;
+            }
+
+            private bool IsItEnd()
+            {
+                bool flag = true;
+
+                for (int j = 1; j < n; j++)
+                {
+                    if (table[m - 1, j] < 0)
+                    {
+                        flag = false;
                         break;
                     }
                 }
 
-                // Если нет положительных коэффициентов, выходим из цикла
-                if (pivotColumn == -1)
-                    break;
-
-                // Находим выходящую строку (ограничение, которое будет исключено из базиса)
-                int pivotRow = -1;
-                double minRatio = double.MaxValue;
-
-                for (int i = 0; i < numConstraints; i++)
-                {
-                    if (simplexTable[i, pivotColumn] > 0)
-                    {
-                        double ratio = simplexTable[i, totalVariables] / simplexTable[i, pivotColumn];
-                        if (ratio < minRatio)
-                        {
-                            minRatio = ratio;
-                            pivotRow = i;
-                        }
-                    }
-                }
-
-                // Если нет выходящей строки, выходим из цикла
-                if (pivotRow == -1)
-                    break;
-
-                // Обновление симплекс-таблицы
-                double pivotValue = simplexTable[pivotRow, pivotColumn];
-                for (int j = 0; j <= totalVariables; j++)
-                {
-                    simplexTable[pivotRow, j] /= pivotValue; // Делим на опорный элемент
-                }
-
-                for (int i = 0; i <= numConstraints; i++)
-                {
-                    if (i != pivotRow)
-                    {
-                        double factor = simplexTable[i, pivotColumn];
-                        for (int j = 0; j <= totalVariables; j++)
-                        {
-                            simplexTable[i, j] -= factor * simplexTable[pivotRow, j];
-                        }
-                    }
-                }
+                return flag;
             }
 
-            double[] result = new double[numVariables];
-            for (int j = 0; j < numVariables; j++)
+            private int findMainCol()
             {
-                result[j] = simplexTable[j, totalVariables]; // Значения переменных
+                int mainCol = 1;
+
+                for (int j = 2; j < n; j++)
+                    if (table[m - 1, j] < table[m - 1, mainCol])
+                        mainCol = j;
+
+                return mainCol;
             }
 
-            return result;
+            private int findMainRow(int mainCol)
+            {
+                int mainRow = 0;
+
+                for (int i = 0; i < m - 1; i++)
+                    if (table[i, mainCol] > 0)
+                    {
+                        mainRow = i;
+                        break;
+                    }
+
+                for (int i = mainRow + 1; i < m - 1; i++)
+                    if ((table[i, mainCol] > 0) && ((table[i, 0] / table[i, mainCol]) < (table[mainRow, 0] / table[mainRow, mainCol])))
+                        mainRow = i;
+
+                return mainRow;
+            }
         }
 
-
-        private void button1_Click(object sender, EventArgs e)
+        private void textBox1_TextChanged(object sender, EventArgs e)
         {
-            SolveSimplexMethod();
+            
+        }
+
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+            
         }
     }
 }
