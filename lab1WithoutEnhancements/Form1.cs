@@ -25,7 +25,9 @@ namespace lab1WithoutEnhancements
             this.Text = "Симплекс-Калькулятор";
             //this.Size = new Size(800, 600);
 
-            int newPanelYPosition = textBox2.Location.Y + textBox2.Height + Padding;
+            //int newPanelYPosition = textBox2.Location.Y + textBox2.Height + Padding;
+
+            int labelXposition = this.Width / 2;
 
             // Панель для переменных
             variablesPanel = new Panel
@@ -79,12 +81,14 @@ namespace lab1WithoutEnhancements
         {
             // Создаем массив TextBox для коэффициентов целевой функции
             textBoxObjectiveArray = new TextBox[numVariables];
+            int labelXposition = this.Width / 2;
 
             Label objectiveLabel = new Label();
             objectiveLabel.Text = "Коэффициенты целевой функции:";
             objectiveLabel.AutoSize = true;
             objectiveLabel.Location = new Point(0, 20); // Устанавливаем локальную позицию
             variablesPanel.Controls.Add(objectiveLabel); // Добавляем на панель
+
 
             int totalWidth = numVariables * 100; // Общая ширина всех TextBox'ов
             int startX = (variablesPanel.ClientSize.Width - totalWidth) / 2; // Центрирование всех TextBox'ов относительно панели
@@ -118,11 +122,13 @@ namespace lab1WithoutEnhancements
 
             // Создаем массив TextBox для ограничений
             textBoxArray = new TextBox[numConstraints, numVariables + 1]; // +1 для свободных членов
+            int labelXposition = this.Width / 2;
+
 
             Label constraintsLabel = new Label();
             constraintsLabel.Text = "Ограничения:";
             constraintsLabel.AutoSize = true;
-            constraintsLabel.Location = new Point(0, 100); // Устанавливаем локальную позицию
+            constraintsLabel.Location = new Point(10, 100); // Устанавливаем локальную позицию
             constraintsPanel.Controls.Add(constraintsLabel); // Добавляем на панель
 
             int totalWidth = (numVariables + 1) * 100 + 20; // Общая ширина всех TextBox'ов и знаков <=
@@ -204,7 +210,7 @@ namespace lab1WithoutEnhancements
                 {
                     message += $"x{i + 1} = {Math.Round(result[i], 3)}\n";
                 }
-                message += "\nЦелевая функция: " + Math.Round(tableResult[numConstraints, 0], 3);
+                message += "\nF = " + Math.Round(tableResult[numConstraints, 0], 3);
 
                 MessageBox.Show(message, "Результат");
             }
