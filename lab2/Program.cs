@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Management;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace lab2
 {
@@ -11,10 +13,9 @@ namespace lab2
     {
         static void Main(string[] args)
         {
-            int chosenOption = 0;
             InitializeMenu();
 
-            
+            //Settings defaultsettings = new Settings(true, true, true);
         }
 
         private static void InitializeMenu()
@@ -29,26 +30,33 @@ namespace lab2
                 "4. SMART\n" +
                 ">> ");
 
-            chosenOption = int.Parse(Console.ReadLine());
-
-            switch (chosenOption)
+            if (int.TryParse(Console.ReadLine(), out int value)) 
             {
-                case 1:
-                    SystemSpecs();
-                    break;
-                case 2:
-                    SystemMonitoring();
-                    break;
-                case 3:
-                    ProgramSettings();
-                    break;
-                case 4:
-                    SmartMonitoring();
-                    break;
-                default:
-                    ResetToMenu();
-                    break;
+                chosenOption = value;
+                switch (chosenOption)
+                {
+                    case 1:
+                        SystemSpecs();
+                        break;
+                    case 2:
+                        SystemMonitoring();
+                        break;
+                    case 3:
+                        ProgramSettings();
+                        break;
+                    case 4:
+                        SmartMonitoring();
+                        break;
+                    default:
+                        ResetToMenu();
+                        break;
+                }
             }
+            else
+            {
+                ResetToMenu();
+            }
+
         }
 
         private static void ResetToMenu()
@@ -108,13 +116,13 @@ namespace lab2
             ManagementObjectSearcher searcher =
                 new ManagementObjectSearcher("root\\CIMV2","SELECT * FROM Win32_Volume");
 
-            Console.WriteLine("------------- Информация о дисках --------");
+            Console.WriteLine("------------- Информация о разделах --------");
 
             foreach (ManagementObject queryObj in searcher.Get())
             {
                 Console.WriteLine("Емкость: {0} ГБ", Math.Round(System.Convert.ToDouble(queryObj["Capacity"]) / 1024 / 1024 / 1024, 2));
-                Console.WriteLine("DriveLetter: {0}", queryObj["DriveLetter"]);
-                //Console.WriteLine("DriveType: {0}", queryObj["DriveType"]);
+                Console.WriteLine("Буква: {0}", queryObj["DriveLetter"]);
+                Console.WriteLine("№ диска: {0}", queryObj["DriveType"]);
                 Console.WriteLine("Файловая система: {0}", queryObj["FileSystem"]);
                 Console.WriteLine("Свободное пространство: {0} ГБ", Math.Round(System.Convert.ToDouble(queryObj["FreeSpace"]) / 1024 / 1024 / 1024, 2));
                 Console.WriteLine("-------------------------------------");
@@ -126,8 +134,6 @@ namespace lab2
             do
             {
                 keyinfo = Console.ReadKey();
-
-                //Console.WriteLine(keyinfo.Key + " was pressed");
             }
             while (keyinfo.Key != ConsoleKey.Escape);
 
@@ -138,14 +144,83 @@ namespace lab2
         {
             Console.Clear();
 
-            ManagementObjectSearcher searcher =
-                new ManagementObjectSearcher("root\\CIMV2",
-           "Select Name, CommandLine From Win32_Process");
+            //Console.WriteLine("{0,-40} {1,-20} {2,-15} {3,-10}", "Процесс", "CPU(%)", "ОЗУ (МБ)", "Диск (МБ/с)");
+            //Console.WriteLine(new string('-', 100));
 
-            foreach (ManagementObject instance in searcher.Get())
+            string header = "{0,-40}";
+            string separator = new string('-', 40);
+            var headerValues = new List<object> { "Процесс" };
+
+            int index = 1; // Начинаем с индекса 1 для CPU
+
+            if (Settings.defaultSettings.CPUUsage)
             {
-                Console.WriteLine("{0}", instance["Name"]);
+                header += $" {{{index++},-20}}";
+                headerValues.Add("CPU(%)");
+                separator += new string('-', 20);
             }
+
+            if (Settings.defaultSettings.MemoryUsage)
+            {
+                header += $" {{{index++},-15}}";
+                headerValues.Add("ОЗУ (МБ)");
+                separator += new string('-', 15);
+            }
+
+            if (Settings.defaultSettings.DiscUsage)
+            {
+                header += $" {{{index++},-10}}";
+                headerValues.Add("Диск (МБ/с)");
+                separator += new string('-', 10);
+            }
+
+            // Выводим заголовок и разделитель
+            Console.WriteLine(header, headerValues.ToArray());
+            Console.WriteLine(separator);
+
+            // Получаем список всех процессов
+            Process[] processes = Process.GetProcesses();
+
+            foreach (Process process in processes)
+            {
+                try
+                {
+                    // Начинаем со списка значений, содержащего только название процесса
+                    var values = new List<object> { process.ProcessName };
+
+                    if (Settings.defaultSettings.CPUUsage)
+                    {
+                        // Использование CPU
+                        PerformanceCounter cpuCounter = new PerformanceCounter("Process", "% Processor Time", process.ProcessName, true);
+                        cpuCounter.NextValue(); // Первая выборка
+                        Thread.Sleep(100); // Задержка для получения реальных данных
+                        values.Add(Math.Round(cpuCounter.NextValue() / Environment.ProcessorCount, 2));
+                    }
+
+                    if (Settings.defaultSettings.MemoryUsage)
+                    {
+                        // Использование памяти
+                        values.Add(Math.Round(process.PrivateMemorySize64 / 1024.0 / 1024.0, 2)); // МБ
+                    }
+
+                    if (Settings.defaultSettings.DiscUsage)
+                    {
+                        // Использование диска
+                        PerformanceCounter diskCounter = new PerformanceCounter("Process", "IO Data Bytes/sec", process.ProcessName, true);
+                        values.Add(Math.Round(diskCounter.NextValue() / 1024 / 1024, 2)); // МБ/с
+                    }
+
+                    Console.WriteLine(header, values.ToArray());
+                }
+                catch
+                {
+                    // Игнорируем процессы, к которым нет доступа или которые были завершены
+                    continue;
+                }
+            }
+
+            Console.WriteLine(new string('-', 100));
+            Console.SetCursorPosition(0, Console.CursorTop);
 
             Console.WriteLine("\nНажмите ESC для возврата в меню");
 
@@ -153,8 +228,6 @@ namespace lab2
             do
             {
                 keyinfo = Console.ReadKey();
-
-                //Console.WriteLine(keyinfo.Key + " was pressed");
             }
             while (keyinfo.Key != ConsoleKey.Escape);
 
@@ -165,7 +238,42 @@ namespace lab2
         {
             Console.Clear();
 
-            ResetToMenu();
+            int chosenSetting = 0;
+
+            Settings.defaultSettings.returnCurrentSettings();
+
+            Console.WriteLine("Выберите опцию для редактирования или нажмите любую клавишу для возврата в меню");
+
+            ConsoleKeyInfo keyinfo;
+            keyinfo = Console.ReadKey();
+            
+            if (int.TryParse(keyinfo.KeyChar.ToString(), out int value))
+            {
+                chosenSetting = value;
+                switch (chosenSetting)
+                {
+                    case 1:
+                        Settings.defaultSettings.CPUUsage = !Settings.defaultSettings.CPUUsage;
+                        ProgramSettings();
+                        break;
+                    case 2:
+                        Settings.defaultSettings.MemoryUsage = !Settings.defaultSettings.MemoryUsage;
+                        ProgramSettings();
+                        break;
+                    case 3:
+                        Settings.defaultSettings.DiscUsage = !Settings.defaultSettings.DiscUsage;
+                        ProgramSettings();
+                        break;
+                    default:
+                        ProgramSettings();
+                        break;
+                }
+            }
+            
+            else
+            {
+                ResetToMenu();
+            }
         }
 
         private static void SmartMonitoring()
