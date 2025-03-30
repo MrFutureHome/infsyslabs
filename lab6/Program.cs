@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Microsoft.Win32;
+using System.Windows.Forms;
 
 namespace lab6
 {
     internal class Program
     {
+        [STAThread]
         static void Main(string[] args)
         {
+
             int part = 0;
             int ex = 0;
 
@@ -137,7 +140,13 @@ namespace lab6
 
         public static void part1_3() 
         {
-            Console.WriteLine("Задание 3 тест");
+            Console.WriteLine("Введите выражение");
+            string expression = Console.ReadLine();
+            var tokens = TokenizeExpression(expression);
+            foreach (var token in tokens)
+            {
+                Console.WriteLine($"Type: {token.Type}, Value: {token.Value}");
+            }
         }
 
         public static void part1_4() 
@@ -158,12 +167,37 @@ namespace lab6
 
         public static void part2_1()
         {
-            Console.WriteLine("Задание 1 тест");
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            Console.WriteLine("Выберите файл со скобочными выражениями:");
+            openFileDialog.Filter = "Текстовые файлы|*.txt|Все файлы|*.*";
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string[] testCases = File.ReadAllLines(openFileDialog.FileName);
+                foreach (var testCase in testCases)
+                {
+                    Console.WriteLine($"{testCase}: {IsValidBracketSequence(testCase)}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Файл не был выбран.");
+            }
         }
 
         public static void part2_2() 
         {
-            Console.WriteLine("Задание 2 тест");
+            Console.WriteLine("Выберите файл с текстом:");
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string text = File.ReadAllText(openFileDialog.FileName);
+                FindPersons(text);
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.WriteLine("Файл не был выбран.");
+            }
         }
 
         public static bool CheckPassword(string password)
@@ -246,6 +280,99 @@ namespace lab6
                 (?:\d{4},\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2}))$");
 
             return regex.IsMatch(date);
+        }
+        static List<Token> TokenizeExpression(string expression)
+        {
+            var tokens = new List<Token>();
+            var regex = new Regex(@"(?<function>sin|cos|tg|ctg|tan|cot|sinh|cosh|th|cth|tanh|coth|ln|lg|log|exp|sqrt|cbrt|abs|sign)|(?<constant>pi|e|sqrt2|ln2|ln10)|(?<number>\d+(\.\d+)?)|(?<variable>[a-zA-Z_][a-zA-Z0-9_]*)|(?<operator>[\^*/+-])|(?<left_parenthesis>\()|(?<right_parenthesis>\))");
+
+            var matches = regex.Matches(expression);
+            foreach (Match match in matches)
+            {
+                if (match.Groups["function"].Success)
+                    tokens.Add(new Token("function", match.Value));
+                else if (match.Groups["constant"].Success)
+                    tokens.Add(new Token("constant", match.Value));
+                else if (match.Groups["number"].Success)
+                    tokens.Add(new Token("number", match.Value));
+                else if (match.Groups["variable"].Success)
+                    tokens.Add(new Token("variable", match.Value));
+                else if (match.Groups["operator"].Success)
+                    tokens.Add(new Token("operator", match.Value));
+                else if (match.Groups["left_parenthesis"].Success)
+                    tokens.Add(new Token("left_parenthesis", match.Value));
+                else if (match.Groups["right_parenthesis"].Success)
+                    tokens.Add(new Token("right_parenthesis", match.Value));
+            }
+
+            return tokens;
+        }
+        static bool IsValidBracketSequence(string input)
+        {
+            var regex = new Regex("\\(\\)|\\{\\}|\\[\\]");
+            while (regex.IsMatch(input))
+            {
+                input = regex.Replace(input, "");
+            }
+            return string.IsNullOrEmpty(input);
+        }
+        static void FindPersons(string text)
+        {           
+            string[] words = text.Split(new[] { ' ', '.', ',', ';', ':', '"', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            ConsoleColor currentColor = ConsoleColor.White;
+
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (i + 1 < words.Length)
+                {
+                    bool isFirstWordPerson = IsPersonName(words[i]);
+                    bool isSecondWordPerson = IsPersonName(words[i + 1]);
+
+                    if (isFirstWordPerson && isSecondWordPerson)
+                    {
+                        currentColor = currentColor == ConsoleColor.White ? ConsoleColor.Cyan : ConsoleColor.White;
+
+                        Console.ForegroundColor = currentColor;
+                        Console.Write(words[i] + " " + words[i + 1] + " ");
+
+                        i++;
+                        continue;
+                    }
+                }
+
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write(words[i] + " ");
+            }
+
+            Console.ResetColor();
+        }
+
+        static bool IsPersonName(string word)
+        {
+            if (string.IsNullOrEmpty(word)) return false;
+            if (char.IsUpper(word[0]))
+            {
+                for (int i = 1; i < word.Length; i++)
+                {
+                    if (!char.IsLower(word[i]) && word[i] != 'Ё' && word[i] != 'ё')
+                        return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+    }
+    class Token
+    {
+        public string Type { get; }
+        public string Value { get; }
+
+        public Token(string type, string value)
+        {
+            Type = type;
+            Value = value;
         }
     }
 }
