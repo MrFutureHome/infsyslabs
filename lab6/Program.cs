@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace lab6
 {
@@ -52,6 +53,8 @@ namespace lab6
                                 Console.Clear();
                                 part1_4();
                                 break;
+                            default:
+                                return;
                         }
                         break;
 
@@ -153,8 +156,8 @@ namespace lab6
         {
             Console.WriteLine("Введите дату");
             string date = Console.ReadLine();
-            bool isValid = CheckDate(date);
 
+            bool isValid = IsDateValid(date);
             if (isValid == false)
             {
                 Console.WriteLine($"Дата {date} не соответствует правильному формату!");
@@ -190,9 +193,8 @@ namespace lab6
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                string text = File.ReadAllText(openFileDialog.FileName);
-                FindPersons(text);
-                Console.ResetColor();
+                string text = File.ReadAllText(openFileDialog.FileName).Replace("\r", "").Replace("\n", "");
+                CheckText(text);
             }
             else
             {
@@ -217,6 +219,7 @@ namespace lab6
 
             return true;
         }
+
         public static bool CheckColor(string color)
         {
             if (color.StartsWith("#"))
@@ -270,17 +273,7 @@ namespace lab6
             }
             return false;
         }
-        public static bool CheckDate(string date)
-        {
-            var regex = new Regex(@"^(?:(?:\d{1,2}[./-]\d{1,2}[./-]\d{4})|(?:\d{4}[./-]\d{1,2}[./-]\d{1,2})|
-                (?:\d{1,2}\s(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s\d{4})|
-                (?:(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{1,2},\s\d{4})|
-                (?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2},\s\d{4})|
-                (?:\d{4},\s(?:January|February|March|April|May|June|July|August|September|October|November|December)\s\d{1,2})|
-                (?:\d{4},\s(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s\d{1,2}))$");
-
-            return regex.IsMatch(date);
-        }
+        
         static List<Token> TokenizeExpression(string expression)
         {
             var tokens = new List<Token>();
@@ -307,6 +300,7 @@ namespace lab6
 
             return tokens;
         }
+
         static bool IsValidBracketSequence(string input)
         {
             var regex = new Regex("\\(\\)|\\{\\}|\\[\\]");
@@ -316,51 +310,136 @@ namespace lab6
             }
             return string.IsNullOrEmpty(input);
         }
-        static void FindPersons(string text)
-        {           
-            string[] words = text.Split(new[] { ' ', '.', ',', ';', ':', '"', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
-            ConsoleColor currentColor = ConsoleColor.White;
+        static bool IsDateValid(string date)
+        {
+            var match = Regex.Match(date,
+                @"^(?:(?<day>\d{1,2})[./-](?<month>\d{1,2})[./-](?<year>\d{4})" +
+                @"|(?<year>\d{4})[./-](?<month>\d{1,2})[./-](?<day>\d{1,2})" +
+                @"|(?<day>\d{1,2})\s(?<monthRus>января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s(?<year>\d{4})" +
+                @"|(?<monthEng>January|February|March|April|May|June|July|August|September|October|November|December)\s(?<day>\d{1,2}),\s(?<year>\d{4})" +
+                @"|(?<monthEngShort>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(?<day>\d{1,2}),\s(?<year>\d{4})" +
+                @"|(?<year>\d{4}),\s(?<monthEng>January|February|March|April|May|June|July|August|September|October|November|December)\s(?<day>\d{1,2})" +
+                @"|(?<year>\d{4}),\s(?<monthEngShort>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(?<day>\d{1,2}))$");
 
-            for (int i = 0; i < words.Length; i++)
+            if (!match.Success) return false;
+
+            int day = int.Parse(match.Groups["day"].Value);
+            int year = int.Parse(match.Groups["year"].Value);
+            int month;
+
+            if (match.Groups["month"].Success)
             {
-                if (i + 1 < words.Length)
-                {
-                    bool isFirstWordPerson = IsPersonName(words[i]);
-                    bool isSecondWordPerson = IsPersonName(words[i + 1]);
-
-                    if (isFirstWordPerson && isSecondWordPerson)
-                    {
-                        currentColor = currentColor == ConsoleColor.White ? ConsoleColor.Cyan : ConsoleColor.White;
-
-                        Console.ForegroundColor = currentColor;
-                        Console.Write(words[i] + " " + words[i + 1] + " ");
-
-                        i++;
-                        continue;
-                    }
-                }
-
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.Write(words[i] + " ");
+                month = int.Parse(match.Groups["month"].Value);
+            }
+            else if (match.Groups["monthRus"].Success)
+            {
+                month = GetMonthFromRussian(match.Groups["monthRus"].Value);
+            }
+            else if (match.Groups["monthEng"].Success)
+            {
+                month = GetMonthFromEnglish(match.Groups["monthEng"].Value);
+            }
+            else
+            {
+                month = GetMonthFromEnglishAbbreviation(match.Groups["monthEngShort"].Value);
             }
 
-            Console.ResetColor();
+            return year >= 0 && month >= 1 && month <= 12 && day >= 1 && day <= DateTime.DaysInMonth(year, month);
         }
 
-        static bool IsPersonName(string word)
+        static int GetMonthFromRussian(string month)
         {
-            if (string.IsNullOrEmpty(word)) return false;
-            if (char.IsUpper(word[0]))
+            switch (month.ToLower())
             {
-                for (int i = 1; i < word.Length; i++)
-                {
-                    if (!char.IsLower(word[i]) && word[i] != 'Ё' && word[i] != 'ё')
-                        return false;
-                }
-                return true;
+                case "января": return 1;
+                case "февраля": return 2;
+                case "марта": return 3;
+                case "апреля": return 4;
+                case "мая": return 5;
+                case "июня": return 6;
+                case "июля": return 7;
+                case "августа": return 8;
+                case "сентября": return 9;
+                case "октября": return 10;
+                case "ноября": return 11;
+                case "декабря": return 12;
+                default: return -1;
             }
-            return false;
+        }
+
+        static int GetMonthFromEnglish(string month)
+        {
+            switch (month.ToLower())
+            {
+                case "january": return 1;
+                case "february": return 2;
+                case "march": return 3;
+                case "april": return 4;
+                case "may": return 5;
+                case "june": return 6;
+                case "july": return 7;
+                case "august": return 8;
+                case "september": return 9;
+                case "october": return 10;
+                case "november": return 11;
+                case "december": return 12;
+                default: return -1;
+            }
+        }
+
+        static int GetMonthFromEnglishAbbreviation(string month)
+        {
+            switch (month.ToLower())
+            {
+                case "jan": return 1;
+                case "feb": return 2;
+                case "mar": return 3;
+                case "apr": return 4;
+                case "may": return 5;
+                case "jun": return 6;
+                case "jul": return 7;
+                case "aug": return 8;
+                case "sep": return 9;
+                case "oct": return 10;
+                case "nov": return 11;
+                case "dec": return 12;
+                default: return -1;
+            }
+        }
+
+        static void CheckText(string text)
+        {
+            string pattern = @"(?<sentence>
+            (?:
+                [^.!?…:]+:                # Захватываем текст до двоеточия (предшествующий список)
+                (?:\s*\n\s*)?             # Допустимые пробелы и переводы строк
+                (?:
+                    \d+\.\s+             # Маркер пункта списка (например, '1. ')
+                    (?:(?!\d+\.\s).)+?    # Текст пункта (до появления следующего маркера)
+                    (?:;|\.)             # Разделитель: ';' для пункта или '.' для последнего пункта
+                    (?:\s*\n\s*)?        # Пробелы и переводы строк между пунктами
+                )+
+            )
+            |
+            (?:
+                [А-ЯЁA-Z]                # Обычное предложение начинается с буквы
+                .+?                      # Минимальное количество символов
+                (?:[.!?…]+)             # Завершающий разделитель (один или несколько символов)
+                (?=\s|$)                # За разделителем – пробел или конец строки
+            )
+        )";
+
+            // Создаём регулярное выражение с нужными опциями:
+            // IgnorePatternWhitespace позволяет использовать пробелы и комментарии внутри шаблона.
+            Regex regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.IgnorePatternWhitespace);
+
+            // Применяем регулярное выражение и выводим найденные предложения
+            MatchCollection matches = regex.Matches(text);
+            foreach (Match m in matches)
+            {
+                Console.WriteLine("Найденное предложение:\n" + m.Groups["sentence"].Value.Trim() + "\n");
+            }
         }
 
     }
