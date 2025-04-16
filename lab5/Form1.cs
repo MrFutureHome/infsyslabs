@@ -16,6 +16,16 @@ namespace lab5
         {
             InitializeComponent();
             ConfigureDataGridView();
+
+            try
+            {
+                ApiKeys.LoadKeys();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка загрузки ключей: " + ex.Message);
+                return;
+            }
         }
 
         private async void Form1_Load(object sender, EventArgs e)
@@ -160,7 +170,7 @@ namespace lab5
 
             dgvMovies.Columns.Add(new DataGridViewTextBoxColumn
             {
-                HeaderText = "Жанры",
+                HeaderText = "Жанр",
                 DataPropertyName = "Genre",
             });
         }

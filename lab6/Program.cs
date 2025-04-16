@@ -342,7 +342,7 @@ namespace lab6
             }
             else
             {
-                month = GetMonthFromEnglishAbbreviation(match.Groups["monthEngShort"].Value);
+                month = GetMonthFromEnglishShort(match.Groups["monthEngShort"].Value);
             }
 
             return year >= 0 && month >= 1 && month <= 12 && day >= 1 && day <= DateTime.DaysInMonth(year, month);
@@ -388,7 +388,7 @@ namespace lab6
             }
         }
 
-        static int GetMonthFromEnglishAbbreviation(string month)
+        static int GetMonthFromEnglishShort(string month)
         {
             switch (month.ToLower())
             {
@@ -411,30 +411,10 @@ namespace lab6
         static void CheckText(string text)
         {
             string pattern = @"(?<sentence>
-            (?:
-                [^.!?…:]+:                # Захватываем текст до двоеточия (предшествующий список)
-                (?:\s*\n\s*)?             # Допустимые пробелы и переводы строк
-                (?:
-                    \d+\.\s+             # Маркер пункта списка (например, '1. ')
-                    (?:(?!\d+\.\s).)+?    # Текст пункта (до появления следующего маркера)
-                    (?:;|\.)             # Разделитель: ';' для пункта или '.' для последнего пункта
-                    (?:\s*\n\s*)?        # Пробелы и переводы строк между пунктами
-                )+
-            )
-            |
-            (?:
-                [А-ЯЁA-Z]                # Обычное предложение начинается с буквы
-                .+?                      # Минимальное количество символов
-                (?:[.!?…]+)             # Завершающий разделитель (один или несколько символов)
-                (?=\s|$)                # За разделителем – пробел или конец строки
-            )
-        )";
+            (?:[^.!?…:]+:(?:\s*\n\s*)?(?:\d+\.\s+(?:(?!\d+\.\s).)+?(?:;|\.)(?:\s*\n\s*)?)+)|(?:[А-ЯЁA-Z].+?(?:[.!?…]+)(?=\s|$)))";
 
-            // Создаём регулярное выражение с нужными опциями:
-            // IgnorePatternWhitespace позволяет использовать пробелы и комментарии внутри шаблона.
             Regex regex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.IgnorePatternWhitespace);
 
-            // Применяем регулярное выражение и выводим найденные предложения
             MatchCollection matches = regex.Matches(text);
             foreach (Match m in matches)
             {

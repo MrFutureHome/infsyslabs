@@ -11,34 +11,49 @@ namespace lab5
 {
     public static class MovieFinder
     {
-        private static readonly string tmdbApiKey = "c622c5706cd487c4bb75f6168640c465";
-        private static readonly string omdbApiKey = "6809ff7f";
+        private static readonly string tmdbApiKey = ApiKeys.TmdbApiKey;
+        private static readonly string omdbApiKey = ApiKeys.OmdbApiKey;
 
         public static async Task<List<Movie>> FindMoviesAsync(int genreId, double minRating, int yearFrom, int yearTo)
         {
             var movies = new List<Movie>();
+            var seenImdbIds = new HashSet<string>();
 
             using (HttpClient client = new HttpClient())
             {
-                for (int page = 1; page <= 10; page++)
+                for (int page = 1; page <= 3; page++)
                 {
-                    string url = $"https://api.themoviedb.org/3/discover/movie?api_key={tmdbApiKey}&with_genres={genreId}&sort_by=popularity.desc&page={page}&language=ru-RU";
+                    string url = $"https://api.themoviedb.org/3/discover/movie" +
+                                 $"?api_key={tmdbApiKey}" +
+                                 $"&with_genres={genreId}" +
+                                 $"&vote_average.gte={minRating.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                                 $"&primary_release_date.gte={yearFrom}-01-01" +
+                                 $"&primary_release_date.lte={yearTo}-12-31" +
+                                 $"&sort_by=popularity.desc" +
+                                 $"&language=ru-RU" +
+                                 $"&page={page}";
+
                     var response = await client.GetStringAsync(url);
                     JObject data = JObject.Parse(response);
 
                     foreach (var tmdbMovie in data["results"])
                     {
-                        double? rating = tmdbMovie["vote_average"]?.Value<double>();
-                        int? year = ParseYear(tmdbMovie["release_date"]?.ToString());
+                        int tmdbId = tmdbMovie["id"].Value<int>();
 
-                        if (rating >= minRating && year >= yearFrom && year <= yearTo)
-                        {
-                            string title = tmdbMovie["title"].ToString();
-                            var movie = await GetOmdbMovieAsync(title);
+                        // Получаем IMDb ID
+                        string externalUrl = $"https://api.themoviedb.org/3/movie/{tmdbId}/external_ids?api_key={tmdbApiKey}";
+                        var extResponse = await client.GetStringAsync(externalUrl);
+                        JObject externalData = JObject.Parse(extResponse);
+                        string imdbId = externalData["imdb_id"]?.ToString();
 
-                            if (movie != null)
-                                movies.Add(movie);
-                        }
+                        if (string.IsNullOrEmpty(imdbId) || seenImdbIds.Contains(imdbId))
+                            continue;
+
+                        seenImdbIds.Add(imdbId);
+
+                        var movie = await GetOmdbMovieByIdAsync(imdbId);
+                        if (movie != null)
+                            movies.Add(movie);
                     }
                 }
             }
@@ -46,12 +61,11 @@ namespace lab5
             return movies;
         }
 
-        private static async Task<Movie> GetOmdbMovieAsync(string title)
+        public static async Task<Movie> GetOmdbMovieByIdAsync(string imdbId)
         {
             using (HttpClient client = new HttpClient())
             {
-                string encodedTitle = HttpUtility.UrlEncode(title);
-                string url = $"http://www.omdbapi.com/?t={encodedTitle}&apikey={omdbApiKey}";
+                string url = $"http://www.omdbapi.com/?apikey={omdbApiKey}&i={imdbId}&plot=full&r=json";
                 var response = await client.GetStringAsync(url);
                 JObject data = JObject.Parse(response);
 
@@ -61,22 +75,19 @@ namespace lab5
                     {
                         Title = data["Title"]?.ToString(),
                         Year = data["Year"]?.ToString(),
+                        Genre = data["Genre"]?.ToString(),
+                        Description = data["Plot"]?.ToString(),
                         Rating = data["imdbRating"]?.ToString(),
                         PosterUrl = data["Poster"]?.ToString(),
-                        Description = data["Plot"]?.ToString(),
-                        TrailerUrl = $"https://www.youtube.com/results?search_query={HttpUtility.UrlEncode(data["Title"]?.ToString() + " trailer")}"
+                        TrailerUrl = $"https://www.imdb.com/title/{imdbId}/"
                     };
                 }
-
-                return null;
+                else
+                {
+                    return null;
+                }
             }
         }
 
-        private static int? ParseYear(string date)
-        {
-            if (DateTime.TryParse(date, out DateTime parsed))
-                return parsed.Year;
-            return null;
-        }
     }
 }
