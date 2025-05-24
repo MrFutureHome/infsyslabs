@@ -10,7 +10,7 @@ namespace lab5
 {
     public static class TmdbApi
     {
-        private static readonly string apiKey = "c622c5706cd487c4bb75f6168640c465";
+        private static readonly string apiKey = ApiKeys.TmdbApiKey;
         private static readonly string genreUrl = $"https://api.themoviedb.org/3/genre/movie/list?api_key={apiKey}&language=ru-RU";
 
         public static async Task<List<TmdbGenre>> GetGenresAsync()
