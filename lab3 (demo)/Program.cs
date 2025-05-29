@@ -1,4 +1,4 @@
-﻿using lab3; // проект с логгером
+﻿using lab3; // проект с логгером (надо добавить в dependencies)
 
 namespace lab3__demo_
 {
@@ -7,12 +7,12 @@ namespace lab3__demo_
         static void Main(string[] args)
         {
             Logger.Instance.Configure(cfg => cfg
-                .SetMinimumLevel(LogLevel.Debug)          // показываем всё с DEBUG и выше
-                .SetTemplate("{t} [{L}] {f}:{n}  {m}")    // свой шаблон
-                .AddConsole()                             // в консоль
-                .AddFile());                              // и в файл log_yyyy-MM-dd_HH-mm-ss.log
+                .SetMinimumLevel(LogLevel.Debug) // показываем всё с DEBUG и выше
+                .SetTemplate("{t} [{L}] {m}")    // свой шаблон
+                .AddConsole()                    // в консоль
+                .AddFile());                     // и в файл log_yyyy-MM-dd_HH-mm-ss.log
 
-            Log.LOGI("Demo запущена ✅");
+            Log.LOGI("Демка");
 
             // имитация многопоточной нагрузки
             var tasks = Enumerable.Range(0, 5)
@@ -37,7 +37,7 @@ namespace lab3__demo_
                 Task.Delay(Random.Shared.Next(100, 400)).Wait();
             }
 
-            if (id == 2)                           // специальная ошибка для проверки
+            if (id == 2) // специальная ошибка для проверки
                 Log.LOGE("Поток {0} столкнулся с ошибкой", id);
 
             Log.LOGI("Поток {0} завершён", id);

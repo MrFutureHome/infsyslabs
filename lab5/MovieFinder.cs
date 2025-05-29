@@ -40,7 +40,6 @@ namespace lab5
                     {
                         int tmdbId = tmdbMovie["id"].Value<int>();
 
-                        // Получаем IMDb ID
                         string externalUrl = $"https://api.themoviedb.org/3/movie/{tmdbId}/external_ids?api_key={tmdbApiKey}";
                         var extResponse = await client.GetStringAsync(externalUrl);
                         JObject externalData = JObject.Parse(extResponse);
