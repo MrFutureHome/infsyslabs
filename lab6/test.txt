@@ -1,0 +1,1 @@
+2.5 * sqrt(x^2 + y^2) - ln(abs(z)) + exp(-a/(b + c)) + cbrt(alpha^3 + beta^3) - sinh(3 * tan(theta)) + pi/4
