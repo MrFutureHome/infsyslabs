@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Culinary Platform</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="./assets/css/styles.css">
+
+  <style>
+    header {
+      position: relative;
+      overflow: hidden;
+      color: white;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url('./assets/img/food.jpg');
+      background-size: cover;
+      background-position: center;
+      filter: blur(8px);
+      transform: scale(1.1);
+      z-index: 0;
+    }
+
+    header .container,
+    header h1,
+    header p,
+    header a {
+      position: relative;
+      z-index: 1;
+    }
+
+    header .btn {
+      margin-top: 1rem;
+    }
+    
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <!-- Логотип/название, кликая по которому мы всегда возвращаемся на главную -->
+    <a class="navbar-brand" href="/">Кулинария</a>
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#nav"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="/masterclasses">Мастер-классы</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="/recipes">Рецепты</a>
+        </li>
+
+        <li class="nav-item d-none" id="navProfile">
+          <a class="nav-link" href="/profile">Профиль</a>
+        </li>
+
+        <li class="nav-item d-none" id="navLogout">
+          <a class="nav-link" href="#">Выход</a>
+        </li>
+
+        <li class="nav-item" id="navLogin">
+          <a class="nav-link" href="/login">Вход</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<header class="bg-light p-5 text-center">
+  <div class="container">
+    <h1 class="display-4">Освой кулинарию с лучшими шеф-поварами!</h1>
+    <p class="lead">Онлайн мастер-классы, пошаговые рецепты и персональные рекомендации.</p>
+    <a href="/masterclasses.html" class="btn btn-primary btn-lg">К мастер-классам</a>
+  </div>
+</header>
+
+<section class="container my-5" id="recommendSection">
+  <h2 class="mb-4">Рекомендуем лично для вас</h2>
+  <div class="row" id="recommendations"></div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="./assets/js/auth.js"></script>
+<script type="module" src="./assets/js/recommendations.js"></script>
+</body>
+</html>

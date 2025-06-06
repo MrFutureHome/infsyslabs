@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Профиль | Culinary Platform</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">Кулинария</a>
+    <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/masterclasses">Мастер-классы</a></li>
+        <li class="nav-item"><a class="nav-link" href="/recipes">Рецепты</a></li>
+        <li class="nav-item"><a class="nav-link active" href="#">Профиль</a></li>
+        <li class="nav-item"><a class="nav-link" id="navLogout" href="#">Выход</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <h2 class="mb-3">Мой профиль</h2>
+  <p id="userEmail" class="mb-4"></p>
+
+  <h4 class="mb-3">Мои записи на мастер-классы</h4>
+  <div id="regList" class="row gy-3"></div>
+  <div id="profileAlert" class="alert alert-danger d-none mt-4"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="./assets/js/auth.js"></script>
+<script type="module">
+  import { request } from './assets/js/api.js';
+  import { ensureAuth, logout } from './assets/js/auth.js';
+
+  ensureAuth();
+  document.getElementById('navLogout').addEventListener('click', e=>{
+    e.preventDefault(); logout(); location.href='/';
+  });
+
+  (async ()=>{
+    try {
+      const me  = await request('/users/me');
+      document.getElementById('userEmail').textContent = `Email: ${me.email}`;
+
+      const regs = await request('/registrations');
+      const list = document.getElementById('regList');
+      if(!regs.length) list.innerHTML='<p>Записей нет.</p>';
+
+      regs.forEach(r=>{
+        list.insertAdjacentHTML('beforeend', `
+          <div class="col-md-6">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5>${r.title}</h5>
+                <p class="mb-2"><small class="text-muted">${new Date(r.date).toLocaleString('ru-RU')}</small></p>
+                <button class="btn btn-outline-danger btn-sm" data-id="${r.id}">Отменить запись</button>
+              </div>
+            </div>
+          </div>
+        `);
+      });
+
+      list.addEventListener('click', async ev=>{
+        if(ev.target.matches('button[data-id]')){
+          const id = ev.target.dataset.id;
+          if(confirm('Удалить запись?')){
+            await request(`/registrations/${id}`, { method:'DELETE' });
+            ev.target.closest('.col-md-6').remove();
+          }
+        }
+      });
+    } catch(err){
+      const a = document.getElementById('profileAlert');
+      a.textContent = err.message; a.classList.remove('d-none');
+    }
+  })();
+</script>
+</body>
+</html>
