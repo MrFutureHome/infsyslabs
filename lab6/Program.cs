@@ -148,7 +148,7 @@ namespace lab6
             var tokens = TokenizeExpression(expression);
             foreach (var token in tokens)
             {
-                Console.WriteLine($"Type: {token.Type}, Value: {token.Value}");
+                Console.WriteLine($"Type: {token.Type}, Value: {token.Value}, Position {token.Position}");
             }
         }
 
@@ -178,7 +178,7 @@ namespace lab6
                 string[] testCases = File.ReadAllLines(openFileDialog.FileName);
                 foreach (var testCase in testCases)
                 {
-                    Console.WriteLine($"{testCase}: {IsValidBracketSequence(testCase)}");
+                    Console.WriteLine($"{testCase}: {TokenizeExpression(testCase)}");
                 }
             }
             else
@@ -204,18 +204,42 @@ namespace lab6
 
         public static bool CheckPassword(string password)
         {
-            var specialChars = new[] { '^', '$', '%', '@', '#', '&', '*', '!', '?' };
-            if (password.Length < 8 || !password.Any(char.IsUpper) || !password.Any(char.IsLower) || !password.Any(char.IsDigit)
-                || password.Count(c => specialChars.Contains(c)) < 2)
-            {
+            if (string.IsNullOrEmpty(password))
                 return false;
-            }
 
-            for (int i = 1; i < password.Length; i++)
+            var specialChars = new HashSet<char> { '^', '$', '%', '@', '#', '&', '*', '!', '?' };
+
+            if (password.Length < 8)
+                return false;
+
+            bool hasUpper = false;
+            bool hasLower = false;
+            bool hasDigit = false;
+            int specialCount = 0;
+
+            for (int i = 0; i < password.Length; i++)
             {
-                if (password[i] == password[i - 1])
+                char c = password[i];
+
+                if (char.IsUpper(c))
+                    hasUpper = true;
+                else if (char.IsLower(c))
+                    hasLower = true;
+                else if (char.IsDigit(c))
+                    hasDigit = true;
+
+                if (specialChars.Contains(c))
+                    specialCount++;
+
+                if (i > 0 && password[i] == password[i - 1])
                     return false;
             }
+
+            if (specialCount < 2)
+                return false;
+
+            if (!hasUpper || !hasLower || !hasDigit)
+                return false;
 
             return true;
         }
@@ -231,24 +255,58 @@ namespace lab6
             {
                 string content = color.Substring(4, color.Length - 5);
                 string[] parts = content.Split(',');
-                if (parts.Length == 3)
+                if (parts.Length != 3)
+                    return false;
+
+                bool? percentFormat = null;
+
+                foreach (string raw in parts)
                 {
-                    foreach (var part in parts)
+                    string part = raw.Trim();
+                    bool hasPercent = part.EndsWith("%");
+
+                    // проверяем что везде либо процент, либо целочисленный формат
+                    if (percentFormat == null)
+                        percentFormat = hasPercent;
+                    else if (percentFormat != hasPercent)
                     {
-                        string trimmed = part.Trim();
-                        if (trimmed.EndsWith("%"))
-                        {
-                            if (!int.TryParse(trimmed.TrimEnd('%'), out int percent) || percent < 0 || percent > 100)
-                                return false;
-                        }
-                        else
-                        {
-                            if (!int.TryParse(trimmed, out int value) || value < 0 || value > 255)
-                                return false;
-                        }
+                        Console.WriteLine($"Смешаны целочисленный формат с процентным");
+                        return false; // смешаны целые и процентные
+                    }    
+                        
+
+                    string digits = hasPercent
+                        ? part.Substring(0, part.Length - 1)
+                        : part;
+
+                    if (!int.TryParse(digits, out int value))
+                    {
+                        Console.WriteLine($"Неправильно задан формат rgb");
+                        return false;
                     }
-                    return true;
+                        
+
+                    if (hasPercent)
+                    {
+                        if (value < 0 || value > 100)
+                        {
+                            Console.WriteLine($"% должен быть в диапазоне от 0 до 100");
+                            return false;
+                        }
+                            
+                    }
+                    else
+                    {
+                        if (value < 0 || value > 255)
+                        {
+                            Console.WriteLine($"Целочисленный формат должен быть в диапазоне от 0 до 255");
+                            return false;
+                        }
+                            
+                    }
                 }
+
+                return true;
             }
             else if (color.StartsWith("hsl(") && color.EndsWith(")"))
             {
@@ -273,42 +331,50 @@ namespace lab6
             }
             return false;
         }
-        
+
+        public class Token
+        {
+            public string Type { get; }
+            public string Value { get; }
+            public int Position { get; }
+
+            public Token(string type, string value, int position)
+            {
+                Type = type;
+                Value = value;
+                Position = position;
+            }
+        }
+
         static List<Token> TokenizeExpression(string expression)
         {
             var tokens = new List<Token>();
-            var regex = new Regex(@"(?<function>sin|cos|tg|ctg|tan|cot|sinh|cosh|th|cth|tanh|coth|ln|lg|log|exp|sqrt|cbrt|abs|sign)|(?<constant>pi|e|sqrt2|ln2|ln10)|(?<number>\d+(\.\d+)?)|(?<variable>[a-zA-Z_][a-zA-Z0-9_]*)|(?<operator>[\^*/+-])|(?<left_parenthesis>\()|(?<right_parenthesis>\))");
 
-            var matches = regex.Matches(expression);
-            foreach (Match match in matches)
+            var regex = new Regex(
+                @"(?<function>sin|cos|tg|ctg|tan|cot|sinh|cosh|th|cth|tanh|coth|ln|lg|log|exp|sqrt|cbrt|abs|sign)" +
+                @"|(?<constant>pi|e|sqrt2|ln2|ln10)" +
+                @"|(?<number>\d+(\.\d+)?)" +
+                @"|(?<variable>[a-zA-Z_][a-zA-Z0-9_]*)" +
+                @"|(?<operator>[\^*/+\-])" +
+                @"|(?<left_parenthesis>\()" +
+                @"|(?<right_parenthesis>\))",
+                RegexOptions.IgnoreCase);
+
+            foreach (Match m in regex.Matches(expression))
             {
-                if (match.Groups["function"].Success)
-                    tokens.Add(new Token("function", match.Value));
-                else if (match.Groups["constant"].Success)
-                    tokens.Add(new Token("constant", match.Value));
-                else if (match.Groups["number"].Success)
-                    tokens.Add(new Token("number", match.Value));
-                else if (match.Groups["variable"].Success)
-                    tokens.Add(new Token("variable", match.Value));
-                else if (match.Groups["operator"].Success)
-                    tokens.Add(new Token("operator", match.Value));
-                else if (match.Groups["left_parenthesis"].Success)
-                    tokens.Add(new Token("left_parenthesis", match.Value));
-                else if (match.Groups["right_parenthesis"].Success)
-                    tokens.Add(new Token("right_parenthesis", match.Value));
+                string type =
+                      m.Groups["function"].Success ? "function"
+                    : m.Groups["constant"].Success ? "constant"
+                    : m.Groups["number"].Success ? "number"
+                    : m.Groups["variable"].Success ? "variable"
+                    : m.Groups["operator"].Success ? "operator"
+                    : m.Groups["left_parenthesis"].Success ? "left_parenthesis"
+                    : "right_parenthesis";
+
+                tokens.Add(new Token(type, m.Value, m.Index));
             }
 
             return tokens;
-        }
-
-        static bool IsValidBracketSequence(string input)
-        {
-            var regex = new Regex("\\(\\)|\\{\\}|\\[\\]");
-            while (regex.IsMatch(input))
-            {
-                input = regex.Replace(input, "");
-            }
-            return string.IsNullOrEmpty(input);
         }
 
         static bool IsDateValid(string date)
